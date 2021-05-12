@@ -7,7 +7,16 @@
 [node name="Root" type="Spatial"]
 
 [node name="Obstacle" parent="." instance=ExtResource( 3 )]
+transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, -5.14162, 5.67015, -5.04132 )
+
+[node name="Obstacle2" parent="." instance=ExtResource( 3 )]
 transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, 7, 1.15374, 6.18861 )
+
+[node name="Obstacle3" parent="." instance=ExtResource( 3 )]
+transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, -11.2866, 6.16893, 6.18861 )
+
+[node name="Obstacle4" parent="." instance=ExtResource( 3 )]
+transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, 7, 4.37693, -5.57144 )
 
 [node name="Floor" parent="." instance=ExtResource( 1 )]
 
