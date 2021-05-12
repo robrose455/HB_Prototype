@@ -1,59 +1,100 @@
 extends KinematicBody
 
-var velocity = Vector3()
-var mass = 2
-var weight = 9.8 * mass
-var hasJumped = false
+const GRAVITY = -24.8
+var vel = Vector3()
+const MAX_SPEED = 20
+const JUMP_SPEED = 18
+const ACCEL = 4.5
+
+var dir = Vector3()
+
+const DEACCEL= 16
+const MAX_SLOPE_ANGLE = 40
+
+var camera
+var rotation_helper
+
+var MOUSE_SENSITIVITY = 0.05
 
 func _ready():
+	camera = $Rotation_Helper/Camera
+	rotation_helper = $Rotation_Helper
 
-	pass
+	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 
-func _process(delta):
-	
-	if Input.is_action_just_pressed("A"):
-		velocity = transform.basis.z * -10
-		
-	if Input.is_action_just_pressed("S"):
-		velocity = transform.basis.x * -10
-		
-	if Input.is_action_just_pressed("W"):
-		velocity = transform.basis.x * 10
-		
-	if Input.is_action_just_pressed("D"):
-		velocity = transform.basis.z * 10
-		
-		
-	if Input.is_action_just_released("A"):
-		velocity = transform.basis.x * 0
-		
-	if Input.is_action_just_released("S"):
-		velocity = transform.basis.z * 0
-		
-	if Input.is_action_just_released("W"):
-		velocity = transform.basis.z * 0
-		
-	if Input.is_action_just_released("D"):
-		velocity = transform.basis.x * 0
-		
-	if Input.is_action_just_pressed("Space") and hasJumped == false:
-		velocity.y = 20
-		hasJumped = true
-		
-	var coll_info = move_and_collide(velocity * delta)
-	
-	if coll_info:
-		
-		hasJumped = false
-		velocity.y = 0
-		
-	if not coll_info: 
-		
-		if velocity.y >= -weight:
-			velocity.y += -0.4
-		
-		
-func _unhandled_input(event):
-	
-	if event is InputEventMouseMotion:
-		rotate_x(-event.relative.x / 100)
+func _physics_process(delta):
+	process_input(delta)
+	process_movement(delta)
+
+func process_input(delta):
+
+	# ----------------------------------
+	# Walking
+	dir = Vector3()
+	var cam_xform = camera.get_global_transform()
+
+	var input_movement_vector = Vector2()
+
+	if Input.is_action_pressed("W"):
+		input_movement_vector.y += 1
+	if Input.is_action_pressed("S"):
+		input_movement_vector.y -= 1
+	if Input.is_action_pressed("A"):
+		input_movement_vector.x -= 1
+	if Input.is_action_pressed("D"):
+		input_movement_vector.x += 1
+
+	input_movement_vector = input_movement_vector.normalized()
+
+	# Basis vectors are already normalized.
+	dir += -cam_xform.basis.z * input_movement_vector.y
+	dir += cam_xform.basis.x * input_movement_vector.x
+	# ----------------------------------
+
+	# ----------------------------------
+	# Jumping
+	if is_on_floor():
+		if Input.is_action_just_pressed("Space"):
+			vel.y = JUMP_SPEED
+	# ----------------------------------
+
+	# ----------------------------------
+	# Capturing/Freeing the cursor
+	if Input.is_action_just_pressed("ui_cancel"):
+		if Input.get_mouse_mode() == Input.MOUSE_MODE_VISIBLE:
+			Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
+		else:
+			Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
+	# ----------------------------------
+
+func process_movement(delta):
+	dir.y = 0
+	dir = dir.normalized()
+
+	vel.y += delta * GRAVITY
+
+	var hvel = vel
+	hvel.y = 0
+
+	var target = dir
+	target *= MAX_SPEED
+
+	var accel
+	if dir.dot(hvel) > 0:
+		accel = ACCEL
+	else:
+		accel = DEACCEL
+
+	hvel = hvel.linear_interpolate(target, accel * delta)
+	vel.x = hvel.x
+	vel.z = hvel.z
+	vel = move_and_slide(vel, Vector3(0, 1, 0), 0.05, 4, deg2rad(MAX_SLOPE_ANGLE))
+
+func _input(event):
+	if event is InputEventMouseMotion and Input.get_mouse_mode() == Input.MOUSE_MODE_CAPTURED:
+		rotation_helper.rotate_z(deg2rad(event.relative.y * MOUSE_SENSITIVITY * -1))
+		self.rotate_y(deg2rad(event.relative.x * MOUSE_SENSITIVITY * -1))
+
+		var camera_rot = rotation_helper.rotation_degrees
+		camera_rot.z = clamp(camera_rot.z, -70, 70)
+		rotation_helper.rotation_degrees = camera_rot
